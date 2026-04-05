@@ -1,0 +1,216 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=IBM+Plex+Mono:ital,wght@0,100..700;1,100..700&display=swap');
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   Blink UI Theme CSS
+   REQUIRED for @blinkdotnew/ui components to render correctly.
+   BlinkUIProvider adds .theme-{name} + .dark/.light to <html>,
+   activating the matching CSS variable set below.
+   ───────────────────────────────────────────────────────────────────────────── */
+@import '@blinkdotnew/ui/styles';
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-sans), 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    letter-spacing: var(--tracking-normal);
+  }
+}
+
+/* ── Telegram Star Miner — Deep Space Dark Theme ─────────────────────────── */
+:root {
+  --background: 222 35% 8%;
+  --foreground: 210 20% 90%;
+  --card: 220 30% 12%;
+  --card-foreground: 210 20% 90%;
+  --popover: 220 30% 12%;
+  --popover-foreground: 210 20% 90%;
+  --primary: 45 100% 51%;
+  --primary-foreground: 220 30% 10%;
+  --secondary: 220 25% 18%;
+  --secondary-foreground: 45 100% 85%;
+  --muted: 220 25% 14%;
+  --muted-foreground: 210 15% 55%;
+  --accent: 190 80% 50%;
+  --accent-foreground: 220 35% 8%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 220 20% 20%;
+  --input: 220 25% 16%;
+  --ring: 45 100% 51%;
+
+  --chart-1: 45 100% 51%;
+  --chart-2: 190 80% 50%;
+  --chart-3: 280 70% 60%;
+  --chart-4: 151 55% 45%;
+  --chart-5: 24 95% 55%;
+
+  --sidebar: 222 35% 7%;
+  --sidebar-foreground: 210 20% 90%;
+  --sidebar-primary: 45 100% 51%;
+  --sidebar-primary-foreground: 220 30% 10%;
+  --sidebar-accent: 220 25% 18%;
+  --sidebar-accent-foreground: 210 20% 90%;
+  --sidebar-border: 220 20% 18%;
+  --sidebar-ring: 45 100% 51%;
+
+  --font-sans: 'DM Sans', sans-serif;
+  --font-mono: 'IBM Plex Mono', monospace;
+
+  --shadow-2xs: 0px 4px 8px -1px hsl(0 0% 0% / 0.3);
+  --shadow-xs: 0px 4px 8px -1px hsl(0 0% 0% / 0.3);
+  --shadow-sm: 0px 4px 12px -1px hsl(0 0% 0% / 0.4), 0px 1px 2px -2px hsl(0 0% 0% / 0.3);
+  --shadow: 0px 4px 12px -1px hsl(0 0% 0% / 0.4), 0px 1px 2px -2px hsl(0 0% 0% / 0.3);
+  --shadow-md: 0px 8px 20px -2px hsl(0 0% 0% / 0.5), 0px 2px 4px -2px hsl(0 0% 0% / 0.3);
+  --shadow-lg: 0px 12px 30px -4px hsl(0 0% 0% / 0.6), 0px 4px 6px -2px hsl(0 0% 0% / 0.3);
+  --shadow-xl: 0px 20px 40px -8px hsl(0 0% 0% / 0.7);
+  --shadow-2xl: 0px 30px 60px -12px hsl(0 0% 0% / 0.8);
+
+  --star-glow: 0 0 30px hsl(45 100% 51% / 0.6), 0 0 60px hsl(45 100% 51% / 0.3);
+  --star-glow-intense: 0 0 40px hsl(45 100% 51% / 0.8), 0 0 80px hsl(45 100% 51% / 0.5), 0 0 120px hsl(45 100% 51% / 0.2);
+
+  --tracking-normal: 0em;
+  --spacing: 0.25rem;
+  --radius: 0.75rem;
+}
+
+:root.dark,
+.theme-linear.dark,
+.theme-glass.dark,
+.theme-midnight.dark,
+.theme-minimal.dark {
+  --background: 222 35% 6%;
+  --foreground: 210 20% 92%;
+  --card: 220 30% 10%;
+  --card-foreground: 210 20% 92%;
+  --popover: 220 30% 10%;
+  --popover-foreground: 210 20% 92%;
+  --primary: 45 100% 55%;
+  --primary-foreground: 220 30% 8%;
+  --secondary: 220 25% 16%;
+  --secondary-foreground: 45 100% 85%;
+  --muted: 220 25% 12%;
+  --muted-foreground: 210 15% 50%;
+  --accent: 190 80% 55%;
+  --accent-foreground: 220 35% 6%;
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 220 20% 18%;
+  --input: 220 25% 14%;
+  --ring: 45 100% 55%;
+
+  --chart-1: 45 100% 55%;
+  --chart-2: 190 80% 55%;
+  --chart-3: 280 70% 65%;
+  --chart-4: 151 55% 50%;
+  --chart-5: 24 95% 60%;
+
+  --sidebar: 222 35% 5%;
+  --sidebar-foreground: 210 20% 92%;
+  --sidebar-primary: 45 100% 55%;
+  --sidebar-primary-foreground: 220 30% 8%;
+  --sidebar-accent: 220 25% 16%;
+  --sidebar-accent-foreground: 210 20% 92%;
+  --sidebar-border: 220 20% 16%;
+  --sidebar-ring: 45 100% 55%;
+}
+
+/* ── Animations ────────────────────────────────────────────────────────────── */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes starFloat {
+  0% { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(-90px) scale(1.6); }
+}
+
+@keyframes starPulse {
+  0%, 100% { box-shadow: var(--star-glow); transform: scale(1); }
+  50% { box-shadow: var(--star-glow-intense); transform: scale(1.04); }
+}
+
+@keyframes starTap {
+  0% { transform: scale(1); }
+  35% { transform: scale(0.91); }
+  100% { transform: scale(1); }
+}
+
+@keyframes energyFill {
+  0% { width: 0%; }
+  100% { width: 100%; }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+@keyframes twinkle {
+  0%, 100% { opacity: 0.3; transform: scale(0.8); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Utility Classes ──────────────────────────────────────────────────────── */
+.animate-fade-in {
+  animation: fadeIn 0.3s ease-in-out;
+}
+
+.animate-slide-up {
+  animation: slideUp 0.4s ease-out;
+}
+
+.star-pulse {
+  animation: starPulse 2.5s ease-in-out infinite;
+}
+
+.star-tap {
+  animation: starTap 0.18s ease-out;
+}
+
+.star-float {
+  animation: starFloat 0.85s ease-out forwards;
+}
+
+.shimmer-bg {
+  background: linear-gradient(90deg, transparent 0%, hsl(45 100% 51% / 0.15) 50%, transparent 100%);
+  background-size: 200% 100%;
+  animation: shimmer 2s linear infinite;
+}
+
+.gold-text {
+  background: linear-gradient(135deg, hsl(50 100% 70%), hsl(38 100% 52%));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.space-bg {
+  background: radial-gradient(ellipse at 50% 0%, hsl(220 50% 14%) 0%, hsl(222 35% 8%) 60%);
+}
+
+.twinkle {
+  animation: twinkle 2s ease-in-out infinite;
+}
+
+.spin-slow {
+  animation: spin-slow 8s linear infinite;
+}
