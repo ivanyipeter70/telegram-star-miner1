@@ -1,7 +1,6 @@
-import { useState, useCallback } from 'react'
-import { ArrowDownToLine, CheckCircle, Clock, Wallet, Copy, ExternalLink, LogOut, Loader2 } from 'lucide-react'
+import { useState, useCallback, useEffect } from 'react'
+import { ArrowDownToLine, CheckCircle, Clock, Wallet, Copy, ExternalLink, LogOut, Loader2, Star, Send } from 'lucide-react'
 import { motion, AnimatePresence } from 'framer-motion'
-import { useTonConnectUI, useTonWallet, useTonAddress } from '@tonconnect/ui-react'
 import { withdraw } from '../store/gameStore'
 import type { GameState, Transaction } from '../store/gameStore'
 
@@ -13,79 +12,172 @@ interface WalletPageProps {
 // Conversion rate: Stars to TON (example: 1000 stars = 1 TON)
 const STARS_TO_TON_RATE = 0.001
 
+// Telegram WebApp types
+declare global {
+  interface Window {
+    Telegram?: {
+      WebApp?: {
+        initData: string
+        initDataUnsafe: {
+          user?: {
+            id: number
+            first_name: string
+            last_name?: string
+            username?: string
+          }
+        }
+        ready: () => void
+        expand: () => void
+        close: () => void
+        MainButton: {
+          text: string
+          color: string
+          textColor: string
+          isVisible: boolean
+          isActive: boolean
+          show: () => void
+          hide: () => void
+          enable: () => void
+          disable: () => void
+          onClick: (callback: () => void) => void
+          offClick: (callback: () => void) => void
+          showProgress: (leaveActive?: boolean) => void
+          hideProgress: () => void
+        }
+        openInvoice: (url: string, callback?: (status: string) => void) => void
+        showPopup: (params: { title?: string; message: string; buttons?: Array<{ id?: string; type?: string; text?: string }> }, callback?: (buttonId: string) => void) => void
+        showAlert: (message: string, callback?: () => void) => void
+        showConfirm: (message: string, callback?: (confirmed: boolean) => void) => void
+        HapticFeedback: {
+          impactOccurred: (style: 'light' | 'medium' | 'heavy' | 'rigid' | 'soft') => void
+          notificationOccurred: (type: 'error' | 'success' | 'warning') => void
+          selectionChanged: () => void
+        }
+        platform: string
+        version: string
+        colorScheme: 'light' | 'dark'
+        themeParams: Record<string, string>
+        isExpanded: boolean
+        viewportHeight: number
+        viewportStableHeight: number
+      }
+    }
+  }
+}
+
 export default function WalletPage({ state, setState }: WalletPageProps) {
-  const [tonConnectUI] = useTonConnectUI()
-  const wallet = useTonWallet()
-  const userFriendlyAddress = useTonAddress()
-  
   const [amount, setAmount] = useState('')
+  const [walletAddress, setWalletAddress] = useState('')
   const [success, setSuccess] = useState(false)
   const [error, setError] = useState('')
   const [isProcessing, setIsProcessing] = useState(false)
+  const [isTelegramWebApp, setIsTelegramWebApp] = useState(false)
+  const [telegramUser, setTelegramUser] = useState<{ id: number; first_name: string; username?: string } | null>(null)
 
-  const isConnected = !!wallet
-
-  const handleConnect = useCallback(async () => {
-    try {
-      await tonConnectUI.openModal()
-    } catch (err) {
-      console.error('Failed to open connect modal:', err)
+  // Check if running inside Telegram
+  useEffect(() => {
+    const tg = window.Telegram?.WebApp
+    if (tg) {
+      setIsTelegramWebApp(true)
+      tg.ready()
+      tg.expand()
+      
+      if (tg.initDataUnsafe?.user) {
+        setTelegramUser(tg.initDataUnsafe.user)
+      }
     }
-  }, [tonConnectUI])
+  }, [])
 
-  const handleDisconnect = useCallback(async () => {
-    try {
-      await tonConnectUI.disconnect()
-    } catch (err) {
-      console.error('Failed to disconnect:', err)
+  const triggerHaptic = useCallback((type: 'success' | 'error' | 'warning' | 'light' | 'medium') => {
+    const tg = window.Telegram?.WebApp?.HapticFeedback
+    if (tg) {
+      if (type === 'success' || type === 'error' || type === 'warning') {
+        tg.notificationOccurred(type)
+      } else {
+        tg.impactOccurred(type)
+      }
     }
-  }, [tonConnectUI])
+  }, [])
 
   const handleWithdraw = async () => {
     setError('')
     const amt = parseFloat(amount)
 
-    if (!isConnected || !userFriendlyAddress) {
-      setError('Please connect your TON wallet first')
+    if (!walletAddress.trim()) {
+      setError('Please enter your TON wallet address')
+      triggerHaptic('error')
       return
     }
+
+    // Basic TON address validation (EQ or UQ prefix, 48 chars total)
+    const isValidTonAddress = /^(EQ|UQ)[a-zA-Z0-9_-]{46}$/.test(walletAddress.trim()) || 
+                              /^0:[a-fA-F0-9]{64}$/.test(walletAddress.trim())
+    
+    if (!isValidTonAddress) {
+      setError('Please enter a valid TON wallet address')
+      triggerHaptic('error')
+      return
+    }
+
     if (isNaN(amt) || amt <= 0) {
       setError('Please enter a valid amount')
+      triggerHaptic('error')
       return
     }
     if (amt > state.balance) {
       setError(`Insufficient balance. You have ${state.balance.toFixed(1)} Stars`)
+      triggerHaptic('error')
       return
     }
     if (amt < 10) {
       setError('Minimum withdrawal is 10 Stars')
+      triggerHaptic('error')
       return
     }
 
+    // Show confirmation via Telegram if available
+    if (isTelegramWebApp && window.Telegram?.WebApp?.showConfirm) {
+      const tonAmount = (amt * STARS_TO_TON_RATE).toFixed(4)
+      window.Telegram.WebApp.showConfirm(
+        `Withdraw ${amt.toFixed(1)} Stars (≈${tonAmount} TON) to ${walletAddress.slice(0, 8)}...${walletAddress.slice(-6)}?`,
+        async (confirmed) => {
+          if (confirmed) {
+            await processWithdrawal(amt)
+          }
+        }
+      )
+    } else {
+      await processWithdrawal(amt)
+    }
+  }
+
+  const processWithdrawal = async (amt: number) => {
     setIsProcessing(true)
+    triggerHaptic('light')
 
     try {
-      // Calculate TON amount
-      const tonAmount = amt * STARS_TO_TON_RATE
-      const nanotons = Math.floor(tonAmount * 1e9).toString()
-
-      // Create transaction - this sends TON from user's wallet
-      // In a real app, you'd have a backend that processes withdrawals
-      // For demo, we simulate the withdrawal process
-      
-      // Simulate processing delay
+      // Simulate processing delay (in production, this would be an API call)
       await new Promise(resolve => setTimeout(resolve, 1500))
 
       // Update local state
-      const newState = withdraw(state, amt, userFriendlyAddress)
+      const newState = withdraw(state, amt, walletAddress.trim())
       setState(newState)
       
       setSuccess(true)
       setAmount('')
+      triggerHaptic('success')
+      
+      // Show success via Telegram alert if available
+      if (isTelegramWebApp && window.Telegram?.WebApp?.showAlert) {
+        const tonAmount = (amt * STARS_TO_TON_RATE).toFixed(4)
+        window.Telegram.WebApp.showAlert(`Withdrawal of ${amt.toFixed(1)} Stars (≈${tonAmount} TON) submitted successfully!`)
+      }
+      
       setTimeout(() => setSuccess(false), 3500)
     } catch (err: any) {
       console.error('Withdrawal error:', err)
       setError(err?.message || 'Withdrawal failed. Please try again.')
+      triggerHaptic('error')
     } finally {
       setIsProcessing(false)
     }
@@ -93,16 +185,33 @@ export default function WalletPage({ state, setState }: WalletPageProps) {
 
   const handleMax = () => {
     setAmount(state.balance.toFixed(1))
+    triggerHaptic('light')
   }
 
-  const shortAddress = userFriendlyAddress
-    ? userFriendlyAddress.slice(0, 6) + '...' + userFriendlyAddress.slice(-4)
-    : ''
+  const handleCopyAddress = () => {
+    if (walletAddress) {
+      navigator.clipboard.writeText(walletAddress)
+      triggerHaptic('light')
+    }
+  }
 
   const txHistory = state.transactions.filter(t => t.type === 'withdraw').slice(0, 10)
 
   return (
     <div className="flex flex-col min-h-full pb-24 pt-4 px-4 space-bg">
+      {/* Telegram User Info (if available) */}
+      {telegramUser && (
+        <div className="w-full max-w-sm mx-auto mb-4">
+          <div className="flex items-center gap-2 px-4 py-2 bg-blue-500/10 border border-blue-500/20 rounded-xl">
+            <Send size={14} className="text-blue-400" />
+            <span className="text-xs text-blue-300">
+              Connected as <strong>{telegramUser.first_name}</strong>
+              {telegramUser.username && <span className="text-blue-400/70"> @{telegramUser.username}</span>}
+            </span>
+          </div>
+        </div>
+      )}
+
       {/* Balance card */}
       <div
         className="w-full max-w-sm mx-auto mb-5 rounded-3xl p-5 border border-primary/30"
@@ -112,7 +221,7 @@ export default function WalletPage({ state, setState }: WalletPageProps) {
         }}
       >
         <div className="flex items-center gap-2 mb-3">
-          <Wallet size={16} className="text-primary" />
+          <Star size={16} className="text-primary" />
           <span className="text-sm text-muted-foreground font-medium">Available Balance</span>
         </div>
         <p className="text-4xl font-bold font-mono gold-text">
@@ -131,59 +240,38 @@ export default function WalletPage({ state, setState }: WalletPageProps) {
         </div>
       </div>
 
-      {/* TON Wallet Connection */}
-      <div className="w-full max-w-sm mx-auto mb-5 bg-card border border-border rounded-3xl p-5">
-        <h2 className="text-base font-semibold text-foreground mb-4 flex items-center gap-2">
-          <Wallet size={16} className="text-primary" />
-          TON Wallet
-        </h2>
-
-        {!isConnected ? (
-          <button
-            onClick={handleConnect}
-            className="w-full py-4 rounded-2xl font-bold text-sm transition-all active:scale-95 flex items-center justify-center gap-2"
-            style={{
-              background: 'linear-gradient(135deg, hsl(210 100% 50%), hsl(220 100% 45%))',
-              color: 'white',
-              boxShadow: '0 4px 20px hsl(210 100% 50% / 0.3)',
-            }}
-          >
-            <Wallet size={18} />
-            Connect TON Wallet
-          </button>
-        ) : (
-          <div className="space-y-3">
-            <div className="flex items-center justify-between bg-secondary rounded-xl px-4 py-3">
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
-                  <Wallet size={14} className="text-white" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-foreground">{shortAddress}</p>
-                  <p className="text-xs text-green-400">Connected</p>
-                </div>
-              </div>
-              <button
-                onClick={handleDisconnect}
-                className="p-2 rounded-lg hover:bg-destructive/10 transition-colors"
-              >
-                <LogOut size={16} className="text-destructive" />
-              </button>
-            </div>
-          </div>
-        )}
-      </div>
-
       {/* Withdraw form */}
       <div className="w-full max-w-sm mx-auto mb-5 bg-card border border-border rounded-3xl p-5">
         <h2 className="text-base font-semibold text-foreground mb-4 flex items-center gap-2">
           <ArrowDownToLine size={16} className="text-primary" />
-          Withdraw to TON
+          Withdraw to TON Wallet
         </h2>
 
-        <div className="space-y-3">
+        <div className="space-y-4">
+          {/* Wallet Address Input */}
           <div>
-            <label className="text-xs text-muted-foreground mb-1 block">Amount (Stars)</label>
+            <label className="text-xs text-muted-foreground mb-1.5 block">TON Wallet Address</label>
+            <div className="relative">
+              <input
+                type="text"
+                value={walletAddress}
+                onChange={e => setWalletAddress(e.target.value)}
+                placeholder="EQ... or UQ..."
+                disabled={isProcessing}
+                className="w-full bg-secondary border border-border rounded-xl px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-primary/60 focus:ring-1 focus:ring-primary/30 transition-all font-mono disabled:opacity-50"
+              />
+              <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                <Wallet size={16} className="text-muted-foreground" />
+              </div>
+            </div>
+            <p className="text-xs text-muted-foreground/70 mt-1">
+              Enter your TON wallet address (Tonkeeper, Telegram Wallet, etc.)
+            </p>
+          </div>
+
+          {/* Amount Input */}
+          <div>
+            <label className="text-xs text-muted-foreground mb-1.5 block">Amount (Stars)</label>
             <div className="relative">
               <input
                 type="number"
@@ -192,12 +280,12 @@ export default function WalletPage({ state, setState }: WalletPageProps) {
                 placeholder="0.0"
                 min="10"
                 step="0.1"
-                disabled={!isConnected || isProcessing}
+                disabled={isProcessing}
                 className="w-full bg-secondary border border-border rounded-xl px-4 py-3 pr-16 text-sm text-foreground placeholder:text-muted-foreground outline-none focus:border-primary/60 focus:ring-1 focus:ring-primary/30 transition-all font-mono disabled:opacity-50"
               />
               <button
                 onClick={handleMax}
-                disabled={!isConnected || isProcessing}
+                disabled={isProcessing}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold px-2 py-1 rounded-lg transition-colors disabled:opacity-50"
                 style={{ color: 'hsl(45 100% 51%)', background: 'hsl(45 100% 51% / 0.1)' }}
               >
@@ -206,7 +294,7 @@ export default function WalletPage({ state, setState }: WalletPageProps) {
             </div>
             {amount && parseFloat(amount) > 0 && (
               <p className="text-xs text-muted-foreground mt-1">
-                You will receive approximately {(parseFloat(amount) * STARS_TO_TON_RATE).toFixed(4)} TON
+                You will receive approximately <span className="text-blue-400 font-medium">{(parseFloat(amount) * STARS_TO_TON_RATE).toFixed(4)} TON</span>
               </p>
             )}
           </div>
@@ -240,14 +328,14 @@ export default function WalletPage({ state, setState }: WalletPageProps) {
 
           <button
             onClick={handleWithdraw}
-            disabled={state.balance <= 0 || !isConnected || isProcessing}
+            disabled={state.balance <= 0 || isProcessing}
             className="w-full py-4 rounded-2xl font-bold text-sm transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
             style={{
-              background: state.balance > 0 && isConnected
+              background: state.balance > 0 
                 ? 'linear-gradient(135deg, hsl(45 100% 51%), hsl(35 100% 44%))'
                 : 'hsl(220 25% 18%)',
-              color: state.balance > 0 && isConnected ? 'hsl(220 30% 10%)' : 'hsl(210 15% 40%)',
-              boxShadow: state.balance > 0 && isConnected ? '0 4px 20px hsl(45 100% 51% / 0.3)' : 'none',
+              color: state.balance > 0 ? 'hsl(220 30% 10%)' : 'hsl(210 15% 40%)',
+              boxShadow: state.balance > 0 ? '0 4px 20px hsl(45 100% 51% / 0.3)' : 'none',
             }}
           >
             {isProcessing ? (
@@ -255,19 +343,20 @@ export default function WalletPage({ state, setState }: WalletPageProps) {
                 <Loader2 size={18} className="animate-spin" />
                 Processing...
               </>
-            ) : !isConnected ? (
-              'Connect Wallet First'
             ) : state.balance <= 0 ? (
               'Mine Stars First'
             ) : (
-              'Withdraw to TON Wallet'
+              <>
+                <ArrowDownToLine size={18} />
+                Withdraw to TON
+              </>
             )}
           </button>
         </div>
 
         <div className="mt-4 flex items-start gap-2 bg-secondary/50 rounded-xl p-3">
           <span className="text-xs text-muted-foreground">
-            <strong className="text-foreground">Rate:</strong> 1,000 Stars = 1 TON. Minimum withdrawal: 10 Stars. Withdrawals are processed to your connected TON wallet.
+            <strong className="text-foreground">Rate:</strong> 1,000 Stars = 1 TON. Minimum withdrawal: 10 Stars. Withdrawals are typically processed within 24 hours.
           </span>
         </div>
       </div>
@@ -289,7 +378,9 @@ export default function WalletPage({ state, setState }: WalletPageProps) {
 
       {txHistory.length === 0 && (
         <div className="w-full max-w-sm mx-auto text-center py-8">
-          <span className="text-4xl block mb-2">💸</span>
+          <div className="w-16 h-16 mx-auto mb-3 rounded-full bg-secondary flex items-center justify-center">
+            <Wallet size={24} className="text-muted-foreground" />
+          </div>
           <p className="text-muted-foreground text-sm">No withdrawals yet. Mine stars and cash out!</p>
         </div>
       )}
