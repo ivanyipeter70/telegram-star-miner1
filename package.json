@@ -24,7 +24,8 @@
   "dependencies": {
     "react": "^19.1.0",
     "react-dom": "^19.1.0",
-    "@tonconnect/ui-react": "^2.0.9",
+    "@tonconnect/sdk": "^3.0.5",
+    "@tonconnect/ui-react": "^2.0.6",
     "@blinkdotnew/sdk": "2.3.9",
     "@blinkdotnew/ui": "0.4.0",
     "@dnd-kit/core": "^6.3.1",

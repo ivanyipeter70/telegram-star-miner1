@@ -32,8 +32,11 @@ importers:
       '@tanstack/react-router':
         specifier: ^1.168.3
         version: 1.168.10(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
+      '@tonconnect/sdk':
+        specifier: ^3.0.5
+        version: 3.4.1
       '@tonconnect/ui-react':
-        specifier: ^2.0.9
+        specifier: ^2.0.6
         version: 2.4.4(react-dom@19.2.4(react@19.2.4))(react@19.2.4)
       autoprefixer:
         specifier: 10.4.16
