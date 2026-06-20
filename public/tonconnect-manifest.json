@@ -1,7 +1,5 @@
 {
   "url": "https://telegram-star-miner.vercel.app",
   "name": "Star Miner",
-  "iconUrl": "https://telegram-star-miner.vercel.app/favicon.svg",
-  "termsOfUseUrl": "https://telegram-star-miner.vercel.app",
-  "privacyPolicyUrl": "https://telegram-star-miner.vercel.app"
+  "iconUrl": "https://telegram-star-miner.vercel.app/tonconnect-icon.png"
 }
