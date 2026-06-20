@@ -6,6 +6,8 @@ export interface Transaction {
   wallet?: string
   timestamp: number
   status: 'completed' | 'pending'
+  /** On-chain transaction BOC / hash returned by the wallet after broadcast */
+  txHash?: string
 }
 
 export interface GameState {
@@ -78,7 +80,12 @@ export function mine(state: GameState): { newState: GameState; gained: number } 
   return { newState, gained }
 }
 
-export function withdraw(state: GameState, amount: number, wallet: string): GameState {
+export function withdraw(
+  state: GameState,
+  amount: number,
+  wallet: string,
+  txHash?: string,
+): GameState {
   if (amount <= 0 || amount > state.balance) return state
 
   const newState: GameState = {
@@ -92,6 +99,7 @@ export function withdraw(state: GameState, amount: number, wallet: string): Game
         wallet,
         timestamp: Date.now(),
         status: 'completed',
+        txHash,
       },
       ...state.transactions.slice(0, 49),
     ],
