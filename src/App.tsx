@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
+import { Analytics } from '@vercel/analytics/react'
 import MinePage from './pages/MinePage'
 import WalletPage from './pages/WalletPage'
 import LeaderboardPage from './pages/LeaderboardPage'
@@ -127,6 +128,7 @@ export default function App() {
           )
         })}
       </nav>
+      <Analytics />
     </div>
   )
 }
